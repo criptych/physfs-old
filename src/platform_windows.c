@@ -172,7 +172,7 @@ static DWORD pollDiscDrives(void)
         stem(SEM_FAILCRITICALERRORS, &oldErrorMode);
     else
         oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
-    
+
     /* Do detection. This may block if a disc is spinning up. */
     for (i = 'A'; i <= 'Z'; i++)
     {
@@ -481,11 +481,11 @@ void *__PHYSFS_platformGetThreadID(void)
 } /* __PHYSFS_platformGetThreadID */
 
 
-static int isSymlinkAttrs(const DWORD attr, const DWORD tag)
+/*static int isSymlinkAttrs(const DWORD attr, const DWORD tag)
 {
-    return ( (attr & FILE_ATTRIBUTE_REPARSE_POINT) && 
+    return ( (attr & FILE_ATTRIBUTE_REPARSE_POINT) &&
              (tag == PHYSFS_IO_REPARSE_TAG_SYMLINK) );
-} /* isSymlinkAttrs */
+}*/ /* isSymlinkAttrs */
 
 
 void __PHYSFS_platformEnumerateFiles(const char *dirname,
@@ -530,8 +530,8 @@ void __PHYSFS_platformEnumerateFiles(const char *dirname,
 
     do
     {
-        const DWORD attr = entw.dwFileAttributes;
-        const DWORD tag = entw.dwReserved0;
+        /*const DWORD attr = entw.dwFileAttributes;*/
+        /*const DWORD tag = entw.dwReserved0;*/
         const WCHAR *fn = entw.cFileName;
         char *utf8;
 
@@ -719,7 +719,7 @@ int __PHYSFS_platformSeek(void *opaque, PHYSFS_uint64 pos)
     {
         BAIL_MACRO(errcodeFromWinApi(), 0);
     } /* if */
-    
+
     return 1;  /* No error occured */
 } /* __PHYSFS_platformSeek */
 
