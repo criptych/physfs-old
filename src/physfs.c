@@ -614,7 +614,7 @@ void __PHYSFS_sort(void *entries, size_t max,
 {
     /*
      * Quicksort w/ Bubblesort fallback algorithm inspired by code from here:
-     *   http://www.cs.ubc.ca/spider/harrison/Java/sorting-demo.html
+     *   https://www.cs.ubc.ca/spider/harrison/Java/sorting-demo.html
      */
     if (max > 0)
         __PHYSFS_quick_sort(entries, 0, max - 1, cmpfn, swapfn);
@@ -1359,6 +1359,15 @@ char *__PHYSFS_strdup(const char *str)
         strcpy(retval, str);
     return retval;
 } /* __PHYSFS_strdup */
+
+
+PHYSFS_uint32 __PHYSFS_hashString(const char *str, size_t len)
+{
+    PHYSFS_uint32 hash = 5381;
+    while (len--)
+        hash = ((hash << 5) + hash) ^ *(str++);
+    return hash;
+} /* __PHYSFS_hashString */
 
 
 /* MAKE SURE you hold stateLock before calling this! */

@@ -127,22 +127,24 @@ void __PHYSFS_smallFree(void *ptr);
 /* The latest supported PHYSFS_Archiver::version value. */
 #define CURRENT_PHYSFS_ARCHIVER_API_VERSION 0
 
-/* This byteorder stuff was lifted from SDL. http://www.libsdl.org/ */
+/* This byteorder stuff was lifted from SDL. https://www.libsdl.org/ */
 #define PHYSFS_LIL_ENDIAN  1234
 #define PHYSFS_BIG_ENDIAN  4321
 
-#if  defined(__i386__) || defined(__ia64__) || \
-     defined(_M_IX86) || defined(_M_IA64) || defined(_M_X64) || \
-    (defined(__alpha__) || defined(__alpha)) || \
-     defined(__arm__) || defined(ARM) || defined(_M_ARM) || \
-    (defined(__mips__) && defined(__MIPSEL__)) || \
-     defined(__SYMBIAN32__) || \
-     defined(__x86_64__) || \
-     defined(__LITTLE_ENDIAN__)
-#define PHYSFS_BYTEORDER    PHYSFS_LIL_ENDIAN
+#ifdef __linux__
+#include <endian.h>
+#define PHYSFS_BYTEORDER  __BYTE_ORDER
+#else /* __linux__ */
+#if defined(__hppa__) || \
+    defined(__m68k__) || defined(mc68000) || defined(_M_M68K) || \
+    (defined(__MIPS__) && defined(__MISPEB__)) || \
+    defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) || \
+    defined(__sparc__)
+#define PHYSFS_BYTEORDER   PHYSFS_BIG_ENDIAN
 #else
-#define PHYSFS_BYTEORDER    PHYSFS_BIG_ENDIAN
+#define PHYSFS_BYTEORDER   PHYSFS_LIL_ENDIAN
 #endif
+#endif /* __linux__ */
 
 
 /*
@@ -162,8 +164,6 @@ void __PHYSFS_smallFree(void *ptr);
  *  a QuickSort and BubbleSort internally.
  * (cmpfn) is used to determine ordering, and (swapfn) does the actual
  *  swapping of elements in the list.
- *
- *  See zip.c for an example.
  */
 void __PHYSFS_sort(void *entries, size_t max,
                    int (*cmpfn)(void *, size_t, size_t),
@@ -246,6 +246,16 @@ int __PHYSFS_stricmpASCII(const char *s1, const char *s2);
  *  strnicmp() might try to apply a locale/codepage/etc, which we don't want.
  */
 int __PHYSFS_strnicmpASCII(const char *s1, const char *s2, PHYSFS_uint32 l);
+
+/*
+ * Like strdup(), but uses the current PhysicsFS allocator.
+ */
+char *__PHYSFS_strdup(const char *str);
+
+/*
+ * Give a hash value for a C string (uses djb's xor hashing algorithm).
+ */
+PHYSFS_uint32 __PHYSFS_hashString(const char *str, size_t len);
 
 
 /*
@@ -538,7 +548,7 @@ void *__PHYSFS_platformGetThreadID(void);
 
 /*
  * Enumerate a directory of files. This follows the rules for the
- *  PHYSFS_Archiver::enumerateFiles() method (see above), except that the
+ *  PHYSFS_Archiver::enumerateFiles() method, except that the
  *  (dirName) that is passed to this function is converted to
  *  platform-DEPENDENT notation by the caller. The PHYSFS_Archiver version
  *  uses platform-independent notation. Note that ".", "..", and other
@@ -630,11 +640,6 @@ void __PHYSFS_platformReleaseMutex(void *mutex);
  *  after this function returns non-zero.
  */
 int __PHYSFS_platformSetDefaultAllocator(PHYSFS_Allocator *a);
-
-/*
- * Like strdup(), but uses the current PhysicsFS allocator.
- */
-char *__PHYSFS_strdup(const char *str);
 
 #ifdef __cplusplus
 }
