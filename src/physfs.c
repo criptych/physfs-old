@@ -48,6 +48,7 @@ typedef struct __PHYSFS_DIRHANDLE__
     char *mountPoint; /* Mountpoint in virtual file tree. */
     const PHYSFS_Archiver *funcs;  /* Ptr to archiver info for this handle. */
     struct __PHYSFS_DIRHANDLE__ *next;  /* linked list stuff. */
+    int priority;
 } DirHandle;
 
 
@@ -1678,7 +1679,7 @@ int PHYSFS_setWriteDir(const char *newDir)
 
 
 static int doMount(PHYSFS_Io *io, const char *fname,
-                   const char *mountPoint, int appendToPath)
+                   const char *mountPoint, int priority)
 {
     DirHandle *dh;
     DirHandle *prev = NULL;
@@ -1696,23 +1697,24 @@ static int doMount(PHYSFS_Io *io, const char *fname,
         /* already in search path? */
         if ((i->dirName != NULL) && (strcmp(fname, i->dirName) == 0))
             BAIL_MUTEX_ERRPASS(stateLock, 1);
-        prev = i;
+        if ((priority < 0) || ((priority > 0) && (i->priority <= priority)))
+            prev = i;
     } /* for */
 
     dh = createDirHandle(io, fname, mountPoint, 0);
     BAIL_IF_MUTEX_ERRPASS(!dh, stateLock, 0);
 
-    if (appendToPath)
-    {
-        if (prev == NULL)
-            searchPath = dh;
-        else
-            prev->next = dh;
-    } /* if */
-    else
+    dh->priority = priority;
+
+    if (prev == NULL)
     {
         dh->next = searchPath;
         searchPath = dh;
+    } /* if */
+    else
+    {
+        dh->next = prev->next;
+        prev->next = dh;
     } /* else */
 
     __PHYSFS_platformReleaseMutex(stateLock);
@@ -1721,18 +1723,18 @@ static int doMount(PHYSFS_Io *io, const char *fname,
 
 
 int PHYSFS_mountIo(PHYSFS_Io *io, const char *fname,
-                   const char *mountPoint, int appendToPath)
+                   const char *mountPoint, int priority)
 {
     BAIL_IF(!io, PHYSFS_ERR_INVALID_ARGUMENT, 0);
     BAIL_IF(!fname, PHYSFS_ERR_INVALID_ARGUMENT, 0);
     BAIL_IF(io->version != 0, PHYSFS_ERR_UNSUPPORTED, 0);
-    return doMount(io, fname, mountPoint, appendToPath);
+    return doMount(io, fname, mountPoint, priority);
 } /* PHYSFS_mountIo */
 
 
 int PHYSFS_mountMemory(const void *buf, PHYSFS_uint64 len, void (*del)(void *),
                        const char *fname, const char *mountPoint,
-                       int appendToPath)
+                       int priority)
 {
     int retval = 0;
     PHYSFS_Io *io = NULL;
@@ -1742,7 +1744,7 @@ int PHYSFS_mountMemory(const void *buf, PHYSFS_uint64 len, void (*del)(void *),
 
     io = __PHYSFS_createMemoryIo(buf, len, del);
     BAIL_IF_ERRPASS(!io, 0);
-    retval = doMount(io, fname, mountPoint, appendToPath);
+    retval = doMount(io, fname, mountPoint, priority);
     if (!retval)
     {
         /* docs say not to call (del) in case of failure, so cheat. */
@@ -1756,7 +1758,7 @@ int PHYSFS_mountMemory(const void *buf, PHYSFS_uint64 len, void (*del)(void *),
 
 
 int PHYSFS_mountHandle(PHYSFS_File *file, const char *fname,
-                       const char *mountPoint, int appendToPath)
+                       const char *mountPoint, int priority)
 {
     int retval = 0;
     PHYSFS_Io *io = NULL;
@@ -1766,7 +1768,7 @@ int PHYSFS_mountHandle(PHYSFS_File *file, const char *fname,
 
     io = __PHYSFS_createHandleIo(file);
     BAIL_IF_ERRPASS(!io, 0);
-    retval = doMount(io, fname, mountPoint, appendToPath);
+    retval = doMount(io, fname, mountPoint, priority);
     if (!retval)
     {
         /* docs say not to destruct in case of failure, so cheat. */
@@ -1778,16 +1780,16 @@ int PHYSFS_mountHandle(PHYSFS_File *file, const char *fname,
 } /* PHYSFS_mountHandle */
 
 
-int PHYSFS_mount(const char *newDir, const char *mountPoint, int appendToPath)
+int PHYSFS_mount(const char *newDir, const char *mountPoint, int priority)
 {
     BAIL_IF(!newDir, PHYSFS_ERR_INVALID_ARGUMENT, 0);
-    return doMount(NULL, newDir, mountPoint, appendToPath);
+    return doMount(NULL, newDir, mountPoint, priority);
 } /* PHYSFS_mount */
 
 
 int PHYSFS_addToSearchPath(const char *newDir, int appendToPath)
 {
-    return PHYSFS_mount(newDir, NULL, appendToPath);
+    return PHYSFS_mount(newDir, NULL, appendToPath ? -1 : 0);
 } /* PHYSFS_addToSearchPath */
 
 
